@@ -1,0 +1,34 @@
+# ─── Virtual Environments ───
+venv/
+.venv/
+env/
+
+# ─── Python Cache ───
+__pycache__/
+*.pyc
+*.pyo
+
+# ─── Dataset (too large for git) ───
+dataset/
+task_1/test_images/
+task_2/test_media/
+task_3/dataset/
+
+# ─── YOLO Model Weights (large binary files) ───
+*.pt
+
+# ─── Trained Model Pickles ───
+task_3/model/*.pkl
+
+# ─── Temp Files ───
+*.tmp
+temp_audio.wav
+temp_recording.wav
+_test_temp_audio.wav
+
+# ─── IDE / OS ───
+.idea/
+.vscode/
+*.swp
+Thumbs.db
+.DS_Store
