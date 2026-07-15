@@ -19,6 +19,7 @@ task_3/dataset/
 
 # ─── Trained Model Pickles ───
 task_3/model/*.pkl
+task_5/model/*.pkl
 
 # ─── Temp Files ───
 *.tmp

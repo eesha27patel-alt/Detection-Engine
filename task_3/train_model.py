@@ -38,27 +38,21 @@ def extract_features_from_audio(audio, sample_rate):
     return features
 
 def augment_audio(audio, sample_rate):
-    """Generate augmented versions of audio for robustness."""
+    """Generate augmented versions of audio for robustness.
+    Optimized: 4 augmented copies per file (fast training)."""
     augmented = []
 
     # 1. Add white noise (simulates noisy mic/environment)
-    for noise_level in [0.005, 0.01, 0.02]:
-        noise = np.random.normal(0, noise_level, audio.shape)
-        augmented.append(audio + noise)
+    noise = np.random.normal(0, 0.01, audio.shape)
+    augmented.append(audio + noise)
 
-    # 2. Pitch shift (simulates different speakers)
-    for n_steps in [-2, -1, 1, 2]:
+    # 2. Pitch shift (simulates different speakers) - only 2 shifts
+    for n_steps in [-1, 1]:
         shifted = librosa.effects.pitch_shift(audio, sr=sample_rate, n_steps=n_steps)
         augmented.append(shifted)
 
-    # 3. Time stretch (simulates faster/slower speech)
-    for rate in [0.85, 1.15]:
-        stretched = librosa.effects.time_stretch(audio, rate=rate)
-        augmented.append(stretched)
-
-    # 4. Volume variation (simulates different recording levels)
-    for gain in [0.5, 0.7, 1.3]:
-        augmented.append(audio * gain)
+    # 3. Volume variation (simulates different recording levels)
+    augmented.append(audio * 0.6)
 
     return augmented
 
