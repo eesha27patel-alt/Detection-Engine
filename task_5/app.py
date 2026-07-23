@@ -1,6 +1,6 @@
 # ═══════════════════════════════════════════════════════════════
 # Task 5 - ASL Sign Language Detection
-# Streamlit App with Live Camera Detection (HOG + OpenCV)
+# Streamlit App (Upload / Camera Capture)
 # ═══════════════════════════════════════════════════════════════
 
 import streamlit as st
@@ -8,8 +8,12 @@ import numpy as np
 import cv2
 import pickle
 import os
-import time
-from skimage.feature import hog
+from datetime import datetime
+import mediapipe as mp
+from mediapipe.tasks.python import BaseOptions
+from mediapipe.tasks.python.vision import (
+    HandLandmarker, HandLandmarkerOptions, RunningMode
+)
 
 # ─────────────────────────────────────
 # PAGE CONFIGURATION
@@ -21,10 +25,20 @@ st.set_page_config(
 )
 
 # ─────────────────────────────────────
-# LOAD TRAINED MODEL
+# TIME RESTRICTION (6 PM - 10 PM only)
+# ─────────────────────────────────────
+current_hour = datetime.now().hour
+if current_hour < 18 or current_hour >= 22:
+    st.title("🤟 ASL Sign Language Detection")
+    st.divider()
+    st.error("🕐 This app is only available between **6:00 PM and 10:00 PM**.")
+    st.info(f"Current time: **{datetime.now().strftime('%I:%M %p')}**. Please come back during the allowed hours.")
+    st.stop()
+
+# ─────────────────────────────────────
+# LOAD MODEL & HAND DETECTOR
 # ─────────────────────────────────────
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-IMG_SIZE = 64
 
 @st.cache_resource
 def load_model():
@@ -34,63 +48,68 @@ def load_model():
         encoder = pickle.load(f)
     return model, encoder
 
-model, encoder = load_model()
-
-# ─────────────────────────────────────
-# FEATURE EXTRACTION (HOG)
-# ─────────────────────────────────────
-def extract_features(image):
-    """Extract HOG features - captures shape/edges, robust to background."""
-    if len(image.shape) == 3:
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    else:
-        gray = image
-    gray = cv2.resize(gray, (IMG_SIZE, IMG_SIZE))
-    features = hog(
-        gray,
-        orientations=9,
-        pixels_per_cell=(8, 8),
-        cells_per_block=(2, 2),
-        block_norm='L2-Hys'
+@st.cache_resource
+def get_hand_detector():
+    options = HandLandmarkerOptions(
+        base_options=BaseOptions(
+            model_asset_path=os.path.join(BASE_DIR, "model", "hand_landmarker.task")
+        ),
+        running_mode=RunningMode.IMAGE,
+        num_hands=1,
+        min_hand_detection_confidence=0.5,
+        min_hand_presence_confidence=0.5
     )
-    return features
+    return HandLandmarker.create_from_options(options)
+
+model, encoder = load_model()
+detector = get_hand_detector()
 
 # ─────────────────────────────────────
 # PREDICTION FUNCTION
 # ─────────────────────────────────────
-def predict_sign_from_frame(frame):
-    """Predict ASL sign from an OpenCV frame."""
-    features = extract_features(frame)
-    prediction = model.predict([features])
-    sign = encoder.inverse_transform(prediction)[0]
-    return sign
+def predict_sign(image):
+    """Detect hand landmarks and predict sign."""
+    rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
+    result = detector.detect(mp_image)
+
+    if result.hand_landmarks:
+        hand = result.hand_landmarks[0]
+        landmarks = []
+        for lm in hand:
+            landmarks.extend([lm.x, lm.y, lm.z])
+        features = np.array(landmarks).reshape(1, -1)
+        prediction = model.predict(features)
+        sign = encoder.inverse_transform(prediction)[0]
+        return sign
+    return None
 
 # ─────────────────────────────────────
 # SHOW RESULT
 # ─────────────────────────────────────
 def show_result(sign):
-    st.success(f"✅ Sign Detected!")
-    st.divider()
-    st.subheader("Detected Sign:")
-    st.markdown(
-        f"<h1 style='text-align:center; color:#4CAF50; font-size:80px;'>{sign}</h1>",
-        unsafe_allow_html=True
-    )
+    if sign:
+        st.success("✅ Sign Detected!")
+        st.divider()
+        st.subheader("Detected Sign:")
+        st.markdown(
+            f"<h1 style='text-align:center; color:#4CAF50; font-size:80px;'>{sign}</h1>",
+            unsafe_allow_html=True
+        )
+    else:
+        st.error("❌ No hand detected in the image! Try again with your hand clearly visible.")
 
 # ═══════════════════════════════════════════════════════════════
-# STREAMLIT UI
+# UI
 # ═══════════════════════════════════════════════════════════════
 
 st.title("🤟 ASL Sign Language Detection")
 st.markdown("#### Detects American Sign Language alphabet signs")
 st.divider()
 
-# ─────────────────────────────────────
-# MODE SELECTION
-# ─────────────────────────────────────
 mode = st.radio(
     "Select Mode:",
-    ["📂 Upload Image", "📷 Live Camera Detection"],
+    ["📂 Upload Image", "📷 Camera Capture"],
     horizontal=True
 )
 
@@ -112,7 +131,7 @@ if mode == "📂 Upload Image":
             file_bytes = np.asarray(bytearray(uploaded_file.getvalue()), dtype=np.uint8)
             image = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
             image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            st.image(image_rgb, caption="Uploaded Image", width="stretch")
+            st.image(image_rgb, caption="Uploaded Image")
             st.success("✅ Image uploaded!")
 
     with col2:
@@ -129,95 +148,36 @@ if mode == "📂 Upload Image":
             with st.spinner("🔄 Analysing sign..."):
                 file_bytes = np.asarray(bytearray(uploaded_file.getvalue()), dtype=np.uint8)
                 image = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
-                sign = predict_sign_from_frame(image)
+                sign = predict_sign(image)
             with col2:
                 show_result(sign)
 
 # ═══════════════════════════════════════════════════════════════
-# LIVE CAMERA MODE
+# CAMERA CAPTURE MODE
 # ═══════════════════════════════════════════════════════════════
 else:
-    st.subheader("📷 Live Camera Detection")
-    st.markdown(
-        "Show your ASL hand sign to the camera. "
-        "The model will **continuously detect** the sign in real-time."
-    )
-    st.info("💡 **Tip:** Use a plain/light background behind your hand for best results.")
-
-    col1, col2 = st.columns([2, 1])
-
-    with col2:
-        st.subheader("🔍 Detected Sign")
-        sign_placeholder = st.empty()
-        sign_placeholder.info("Start camera to detect signs")
-        st.divider()
-        history_header = st.empty()
-        history_area = st.empty()
+    col1, col2 = st.columns(2)
 
     with col1:
-        run_camera = st.toggle("🎥 Start Camera", value=False)
-        frame_placeholder = st.empty()
+        st.subheader("📷 Capture Sign")
+        st.info("Show your ASL sign and click the camera button to capture")
+        camera_image = st.camera_input("📷 Capture your sign")
 
-    if run_camera:
-        cap = cv2.VideoCapture(0)
-        if not cap.isOpened():
-            st.error("❌ Cannot access camera! Please check your camera connection.")
-        else:
-            sign_history = []
-            last_sign = ""
-            frame_count = 0
+        if camera_image is not None:
+            st.success("✅ Image captured!")
 
-            history_header.markdown("**📝 Sign History:**")
+    with col2:
+        st.subheader("🔍 Detection Result")
+        if camera_image is None:
+            st.info("Capture an image to detect the sign")
 
-            while run_camera:
-                ret, frame = cap.read()
-                if not ret:
-                    st.warning("⚠️ Failed to read from camera")
-                    break
+    st.divider()
 
-                frame_count += 1
-
-                # Draw ROI box
-                h, w = frame.shape[:2]
-                roi_size = min(h, w) - 40
-                roi_x = (w - roi_size) // 2
-                roi_y = (h - roi_size) // 2
-                cv2.rectangle(frame, (roi_x, roi_y),
-                              (roi_x + roi_size, roi_y + roi_size),
-                              (0, 255, 0), 3)
-                cv2.putText(frame, "Show sign here", (roi_x, roi_y - 10),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
-
-                # Predict every 5 frames
-                if frame_count % 5 == 0:
-                    roi = frame[roi_y:roi_y + roi_size, roi_x:roi_x + roi_size]
-                    sign = predict_sign_from_frame(roi)
-
-                    if sign != "nothing":
-                        sign_placeholder.markdown(
-                            f"<h1 style='text-align:center; color:#4CAF50; "
-                            f"font-size:100px;'>{sign}</h1>",
-                            unsafe_allow_html=True
-                        )
-                        if sign != last_sign:
-                            sign_history.append(sign)
-                            last_sign = sign
-                            if len(sign_history) > 20:
-                                sign_history = sign_history[-20:]
-                            history_area.markdown(
-                                f"` {'  '.join(sign_history)} `"
-                            )
-                    else:
-                        sign_placeholder.info("👋 Show a sign to the camera")
-
-                    cv2.putText(frame, f"Sign: {sign}", (10, 40),
-                                cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 255, 0), 3)
-
-                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                frame_placeholder.image(frame_rgb, channels="RGB",
-                                        width="stretch")
-                time.sleep(0.03)
-
-            cap.release()
-    else:
-        frame_placeholder.info("👆 Toggle the switch above to start the camera")
+    if camera_image is not None:
+        if st.button("🔍 Detect Sign", use_container_width=True):
+            with st.spinner("🔄 Analysing sign..."):
+                file_bytes = np.asarray(bytearray(camera_image.getvalue()), dtype=np.uint8)
+                image = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+                sign = predict_sign(image)
+            with col2:
+                show_result(sign)
