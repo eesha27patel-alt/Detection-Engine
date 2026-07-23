@@ -17,9 +17,9 @@ task_3/dataset/
 # ─── YOLO Model Weights (large binary files) ───
 *.pt
 
-# ─── Trained Model Pickles ───
+# ─── Trained Models (too large for git, regenerate with train_model.py) ───
 task_3/model/*.pkl
-task_5/model/*.pkl
+task_5/model/
 
 # ─── Temp Files ───
 *.tmp
