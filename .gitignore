@@ -20,6 +20,12 @@ task_3/dataset/
 # ─── Trained Models (too large for git, regenerate with train_model.py) ───
 task_3/model/*.pkl
 task_5/model/
+task_6/*.onnx
+task_6/*.task
+task_6/*.caffemodel
+task_6/deploy.prototxt
+task_6/test_media/
+task_6/temp_face_age.jpg
 
 # ─── Temp Files ───
 *.tmp
