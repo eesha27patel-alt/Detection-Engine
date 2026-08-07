@@ -1,7 +1,5 @@
-# ═══════════════════════════════════════════════════════════════
 # Task 5 - ASL Sign Language Detection
 # Streamlit App (Upload / Camera Capture)
-# ═══════════════════════════════════════════════════════════════
 
 import streamlit as st
 import numpy as np
@@ -15,29 +13,23 @@ from mediapipe.tasks.python.vision import (
     HandLandmarker, HandLandmarkerOptions, RunningMode
 )
 
-# ─────────────────────────────────────
 # PAGE CONFIGURATION
-# ─────────────────────────────────────
 st.set_page_config(
     page_title="ASL Sign Language Detection",
-    page_icon="🤟",
+    page_icon="",
     layout="wide"
 )
 
-# ─────────────────────────────────────
 # TIME RESTRICTION (6 PM - 10 PM only)
-# ─────────────────────────────────────
 current_hour = datetime.now().hour
 if current_hour < 18 or current_hour >= 22:
-    st.title("🤟 ASL Sign Language Detection")
+    st.title(" ASL Sign Language Detection")
     st.divider()
-    st.error("🕐 This app is only available between **6:00 PM and 10:00 PM**.")
+    st.error(" This app is only available between **6:00 PM and 10:00 PM**.")
     st.info(f"Current time: **{datetime.now().strftime('%I:%M %p')}**. Please come back during the allowed hours.")
     st.stop()
 
-# ─────────────────────────────────────
 # LOAD MODEL & HAND DETECTOR
-# ─────────────────────────────────────
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 @st.cache_resource
@@ -64,9 +56,7 @@ def get_hand_detector():
 model, encoder = load_model()
 detector = get_hand_detector()
 
-# ─────────────────────────────────────
 # PREDICTION FUNCTION
-# ─────────────────────────────────────
 def predict_sign(image):
     """Detect hand landmarks and predict sign."""
     rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -84,12 +74,10 @@ def predict_sign(image):
         return sign
     return None
 
-# ─────────────────────────────────────
 # SHOW RESULT
-# ─────────────────────────────────────
 def show_result(sign):
     if sign:
-        st.success("✅ Sign Detected!")
+        st.success(" Sign Detected!")
         st.divider()
         st.subheader("Detected Sign:")
         st.markdown(
@@ -97,32 +85,28 @@ def show_result(sign):
             unsafe_allow_html=True
         )
     else:
-        st.error("❌ No hand detected in the image! Try again with your hand clearly visible.")
+        st.error(" No hand detected in the image! Try again with your hand clearly visible.")
 
-# ═══════════════════════════════════════════════════════════════
 # UI
-# ═══════════════════════════════════════════════════════════════
 
-st.title("🤟 ASL Sign Language Detection")
+st.title(" ASL Sign Language Detection")
 st.markdown("#### Detects American Sign Language alphabet signs")
 st.divider()
 
 mode = st.radio(
     "Select Mode:",
-    ["📂 Upload Image", "📷 Camera Capture"],
+    [" Upload Image", " Camera Capture"],
     horizontal=True
 )
 
 st.divider()
 
-# ═══════════════════════════════════════════════════════════════
 # UPLOAD MODE
-# ═══════════════════════════════════════════════════════════════
-if mode == "📂 Upload Image":
+if mode == " Upload Image":
     col1, col2 = st.columns(2)
 
     with col1:
-        st.subheader("📂 Upload Sign Image")
+        st.subheader(" Upload Sign Image")
         uploaded_file = st.file_uploader(
             "Upload an image of an ASL sign",
             type=["jpg", "jpeg", "png", "bmp"]
@@ -132,50 +116,48 @@ if mode == "📂 Upload Image":
             image = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
             image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             st.image(image_rgb, caption="Uploaded Image")
-            st.success("✅ Image uploaded!")
+            st.success(" Image uploaded!")
 
     with col2:
-        st.subheader("🔍 Detection Result")
+        st.subheader(" Detection Result")
         if uploaded_file is None:
             st.info("Upload an image to detect the sign")
 
     st.divider()
 
-    if st.button("🔍 Detect Sign", use_container_width=True):
+    if st.button(" Detect Sign", use_container_width=True):
         if uploaded_file is None:
-            st.warning("⚠️ Please upload an image first!")
+            st.warning(" Please upload an image first!")
         else:
-            with st.spinner("🔄 Analysing sign..."):
+            with st.spinner(" Analysing sign..."):
                 file_bytes = np.asarray(bytearray(uploaded_file.getvalue()), dtype=np.uint8)
                 image = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
                 sign = predict_sign(image)
             with col2:
                 show_result(sign)
 
-# ═══════════════════════════════════════════════════════════════
 # CAMERA CAPTURE MODE
-# ═══════════════════════════════════════════════════════════════
 else:
     col1, col2 = st.columns(2)
 
     with col1:
-        st.subheader("📷 Capture Sign")
+        st.subheader(" Capture Sign")
         st.info("Show your ASL sign and click the camera button to capture")
-        camera_image = st.camera_input("📷 Capture your sign")
+        camera_image = st.camera_input(" Capture your sign")
 
         if camera_image is not None:
-            st.success("✅ Image captured!")
+            st.success(" Image captured!")
 
     with col2:
-        st.subheader("🔍 Detection Result")
+        st.subheader(" Detection Result")
         if camera_image is None:
             st.info("Capture an image to detect the sign")
 
     st.divider()
 
     if camera_image is not None:
-        if st.button("🔍 Detect Sign", use_container_width=True):
-            with st.spinner("🔄 Analysing sign..."):
+        if st.button(" Detect Sign", use_container_width=True):
+            with st.spinner(" Analysing sign..."):
                 file_bytes = np.asarray(bytearray(camera_image.getvalue()), dtype=np.uint8)
                 image = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
                 sign = predict_sign(image)

@@ -1,0 +1,12 @@
+streamlit
+ultralytics
+opencv-python-headless
+Pillow
+numpy
+deepface
+mediapipe
+librosa
+soundfile
+resampy
+scikit-learn
+tf-keras

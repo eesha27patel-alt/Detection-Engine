@@ -1,8 +1,6 @@
-# ═══════════════════════════════════════════════════════════════
 # Task 3 - Emotion Detection through Voice
 # Author - Your Name
 # Date - Today's Date
-# ═══════════════════════════════════════════════════════════════
 
 import streamlit as st
 import librosa
@@ -10,18 +8,14 @@ import numpy as np
 import pickle
 import os
 
-# ─────────────────────────────────────
 # PAGE CONFIGURATION
-# ─────────────────────────────────────
 st.set_page_config(
     page_title="Voice Emotion Detection",
-    page_icon="🎤",
+    page_icon="",
     layout="wide"
 )
 
-# ─────────────────────────────────────
 # LOAD TRAINED MODEL
-# ─────────────────────────────────────
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def load_model():
@@ -35,17 +29,15 @@ def load_model():
 
 model, scaler, encoder = load_model()
 
-# ─────────────────────────────────────
 # EMOTION MAPPINGS
-# ─────────────────────────────────────
 EMOTION_EMOJI = {
-    "angry":   "😡 Angry",
-    "disgust": "🤢 Disgust",
-    "fear":    "😨 Fear",
-    "happy":   "😊 Happy",
-    "neutral": "😐 Neutral",
-    "sad":     "😢 Sad",
-    "surprise":"😲 Surprise"
+    "angry":   " Angry",
+    "disgust": " Disgust",
+    "fear":    " Fear",
+    "happy":   " Happy",
+    "neutral": " Neutral",
+    "sad":     " Sad",
+    "surprise":" Surprise"
 }
 
 EMOTION_COLOUR = {
@@ -58,9 +50,7 @@ EMOTION_COLOUR = {
     "surprise":"yellow"
 }
 
-# ─────────────────────────────────────
 # GENDER DETECTION FUNCTION
-# ─────────────────────────────────────
 def detect_gender(audio, sample_rate):
     # Use pyin for reliable fundamental frequency estimation
     f0, voiced_flag, voiced_probs = librosa.pyin(
@@ -78,9 +68,7 @@ def detect_gender(audio, sample_rate):
     else:
         return "male"
 
-# ─────────────────────────────────────
 # FEATURE EXTRACTION FUNCTION
-# ─────────────────────────────────────
 def extract_features(audio, sample_rate):
     mfcc = librosa.feature.mfcc(y=audio, sr=sample_rate, n_mfcc=40)
     mfcc_mean = np.mean(mfcc.T, axis=0)
@@ -91,9 +79,7 @@ def extract_features(audio, sample_rate):
     features = np.hstack([mfcc_mean, chroma_mean, mel_mean])
     return features
 
-# ─────────────────────────────────────
 # PREDICTION FUNCTION
-# ─────────────────────────────────────
 def predict_emotion(audio_path):
     audio, sample_rate = librosa.load(audio_path, res_type='kaiser_fast')
     gender = detect_gender(audio, sample_rate)
@@ -105,17 +91,15 @@ def predict_emotion(audio_path):
     emotion = encoder.inverse_transform(prediction)[0]
     return emotion, "female"
 
-# ─────────────────────────────────────
 # SHOW RESULT FUNCTION
-# ─────────────────────────────────────
 def show_result(emotion, gender):
     if gender == "male":
-        st.error("⚠️ Male voice detected!")
+        st.error(" Male voice detected!")
         st.warning("This model works exclusively with female voices. Please upload or record a female voice.")
     else:
         emotion_display = EMOTION_EMOJI.get(emotion, emotion)
         colour = EMOTION_COLOUR.get(emotion, "white")
-        st.success("✅ Female voice confirmed")
+        st.success(" Female voice confirmed")
         st.divider()
         st.subheader("Detected Emotion:")
         st.markdown(
@@ -123,53 +107,47 @@ def show_result(emotion, gender):
             unsafe_allow_html=True
         )
 
-# ═══════════════════════════════════════════════════════════════
 # STREAMLIT UI
-# ═══════════════════════════════════════════════════════════════
 
-st.title("🎤 Voice Emotion Detection System")
+st.title(" Voice Emotion Detection System")
 st.markdown("#### Detects emotions from female voice recordings")
 st.divider()
 
-# ─────────────────────────────────────
 # MODE SELECTION
-# ─────────────────────────────────────
 mode = st.radio(
     "Select Mode:",
-    ["📂 Upload Voice File", "🎙️ Live Recording"],
+    [" Upload Voice File", " Live Recording"],
     horizontal=True
 )
 
 st.divider()
 
-# ═══════════════════════════════════════════════════════════════
 # UPLOAD MODE
-# ═══════════════════════════════════════════════════════════════
-if mode == "📂 Upload Voice File":
+if mode == " Upload Voice File":
     col1, col2 = st.columns(2)
 
     with col1:
-        st.subheader("📂 Upload Voice Note")
+        st.subheader(" Upload Voice Note")
         uploaded_file = st.file_uploader(
             "Upload a voice file",
             type=["wav", "mp3", "ogg"]
         )
         if uploaded_file is not None:
             st.audio(uploaded_file, format="audio/wav")
-            st.success("✅ Voice file uploaded!")
+            st.success(" Voice file uploaded!")
 
     with col2:
-        st.subheader("🔍 Detection Result")
+        st.subheader(" Detection Result")
         if uploaded_file is None:
             st.info("Upload a voice file to detect emotion")
 
     st.divider()
 
-    if st.button("🔍 Detect Emotion", use_container_width=True):
+    if st.button(" Detect Emotion", use_container_width=True):
         if uploaded_file is None:
-            st.warning("⚠️ Please upload a voice file first!")
+            st.warning(" Please upload a voice file first!")
         else:
-            with st.spinner("🔄 Analysing voice..."):
+            with st.spinner(" Analysing voice..."):
                 temp_path = os.path.join(BASE_DIR, "temp_audio.wav")
                 with open(temp_path, "wb") as f:
                     f.write(uploaded_file.getvalue())
@@ -179,33 +157,31 @@ if mode == "📂 Upload Voice File":
             with col2:
                 show_result(emotion, gender)
 
-# ═══════════════════════════════════════════════════════════════
 # LIVE RECORDING MODE
-# ═══════════════════════════════════════════════════════════════
 else:
     col1, col2 = st.columns(2)
 
     with col1:
-        st.subheader("🎙️ Record Your Voice")
+        st.subheader(" Record Your Voice")
         st.info("Click the microphone button below to record")
 
         # Built-in Streamlit audio recorder - no extra packages needed
-        audio_bytes = st.audio_input("🎙️ Record your voice here")
+        audio_bytes = st.audio_input(" Record your voice here")
 
         if audio_bytes is not None:
             st.audio(audio_bytes, format="audio/wav")
-            st.success("✅ Recording captured!")
+            st.success(" Recording captured!")
 
     with col2:
-        st.subheader("🔍 Detection Result")
+        st.subheader(" Detection Result")
         if audio_bytes is None:
             st.info("Record your voice to detect emotion")
 
     st.divider()
 
     if audio_bytes is not None:
-        if st.button("🔍 Detect Emotion from Recording", use_container_width=True):
-            with st.spinner("🔄 Analysing voice..."):
+        if st.button(" Detect Emotion from Recording", use_container_width=True):
+            with st.spinner(" Analysing voice..."):
                 temp_path = os.path.join(BASE_DIR, "temp_recording.wav")
                 with open(temp_path, "wb") as f:
                     f.write(audio_bytes.getvalue())

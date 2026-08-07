@@ -1,9 +1,7 @@
-# ═══════════════════════════════════════════════════════════════
 # Task 1 - Car Colour Detection System
 # Author - Your Name
 # Date - Today's Date
 # Description - Detects car colours and counts people at traffic signal
-# ═══════════════════════════════════════════════════════════════
 
 import streamlit as st
 from PIL import Image
@@ -11,18 +9,14 @@ import cv2
 import numpy as np
 from ultralytics import YOLO
 
-# ─────────────────────────────────────
 # PAGE CONFIGURATION
-# ─────────────────────────────────────
 st.set_page_config(
     page_title="Car Colour Detection",
-    page_icon="🚗",
+    page_icon="",
     layout="wide"
 )
 
-# ─────────────────────────────────────
 # CUSTOM CSS FOR BETTER LOOKS
-# ─────────────────────────────────────
 st.markdown("""
     <style>
     .main { background-color: #0e1117; }
@@ -45,20 +39,16 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# ─────────────────────────────────────
 # LOAD YOLO MODEL
-# ─────────────────────────────────────
 @st.cache_resource
 def load_model():
     return YOLO('yolov8s.pt')  # 'small' model for better accuracy
 
 model = load_model()
 
-# ─────────────────────────────────────
 # COLOUR DETECTION FUNCTION
-# ─────────────────────────────────────
 def get_car_colour(image_crop):
-    # ── Crop to central 60% to avoid background, road, and window edges ──
+    #  Crop to central 60% to avoid background, road, and window edges 
     h, w = image_crop.shape[:2]
     margin_x = int(w * 0.2)
     margin_y = int(h * 0.2)
@@ -119,9 +109,7 @@ def get_car_colour(image_crop):
 
     return detected_colour
 
-# ─────────────────────────────────────
 # MAIN DETECTION FUNCTION
-# ─────────────────────────────────────
 def detect_cars_and_people(uploaded_file):
     # Read uploaded image as bytes
     file_bytes = np.asarray(
@@ -133,10 +121,10 @@ def detect_cars_and_people(uploaded_file):
     # Keep a clean copy for colour detection (before any rectangles are drawn)
     clean_image = image.copy()
 
-    # ═══════════════════════════════════════════════════════════
+    # 
     # TWO-PASS DETECTION: Separate passes for people and vehicles
     # so that NMS for people can NEVER suppress car detections
-    # ═══════════════════════════════════════════════════════════
+    # 
 
     # COCO class IDs: person=0, car=2, motorcycle=3, bus=5, truck=7
     PERSON_CLASSES = [0]
@@ -154,7 +142,7 @@ def detect_cars_and_people(uploaded_file):
     colour_summary = []
     all_detected_classes = []
 
-    # ── PROCESS PEOPLE ──
+    #  PROCESS PEOPLE 
     for box in people_results.boxes:
         class_id = int(box.cls[0])
         class_name = model.names[class_id]
@@ -174,7 +162,7 @@ def detect_cars_and_people(uploaded_file):
             0.6, (0, 255, 0), 2
         )
 
-    # ── PROCESS VEHICLES (YOLO) ──
+    #  PROCESS VEHICLES (YOLO) 
     for box in vehicle_results.boxes:
         class_id = int(box.cls[0])
         class_name = model.names[class_id]
@@ -216,10 +204,10 @@ def detect_cars_and_people(uploaded_file):
             0.6, rect_colour, 2
         )
 
-    # ═══════════════════════════════════════════════════════════
+    # 
     # FALLBACK: Contour-based car detection for cartoon/illustration images
     # If YOLO found 0 vehicles, use colour segmentation + scoring
-    # ═══════════════════════════════════════════════════════════
+    # 
     if car_count == 0:
         img_h, img_w = clean_image.shape[:2]
         img_area = img_h * img_w
@@ -305,7 +293,7 @@ def detect_cars_and_people(uploaded_file):
                 if person_overlap > 0.5:
                     continue
 
-                # ── SCORING: rate how "car-like" this region is ──
+                #  SCORING: rate how "car-like" this region is 
                 score = 0.0
 
                 # Size score: prefer regions that are 2-10% of image
@@ -406,24 +394,18 @@ def detect_cars_and_people(uploaded_file):
 
     return image, car_count, people_count, colour_summary, all_detected_classes
 
-# ═══════════════════════════════════════════════════════════════
 # STREAMLIT UI
-# ═══════════════════════════════════════════════════════════════
 
-# ─────────────────────────────────────
 # HEADER
-# ─────────────────────────────────────
-st.title("🚗 Car Colour Detection System")
+st.title(" Car Colour Detection System")
 st.markdown("#### Detects car colours and counts people at traffic signals")
 st.divider()
 
-# ─────────────────────────────────────
 # TWO COLUMN LAYOUT
-# ─────────────────────────────────────
 col1, col2 = st.columns(2)
 
 with col1:
-    st.subheader("📂 Upload Image")
+    st.subheader(" Upload Image")
     uploaded_file = st.file_uploader(
         "Choose a traffic image",
         type=["jpg", "jpeg", "png"]
@@ -432,25 +414,23 @@ with col1:
     if uploaded_file is not None:
         image = Image.open(uploaded_file)
         st.image(image, caption="Original Image", use_column_width=True)
-        st.success("✅ Image uploaded successfully!")
+        st.success(" Image uploaded successfully!")
     else:
-        st.info("👆 Please upload a traffic image to begin")
+        st.info(" Please upload a traffic image to begin")
 
 with col2:
-    st.subheader("🔍 Detection Output")
+    st.subheader(" Detection Output")
     if uploaded_file is None:
         st.info("Detection result will appear here after you click Detect")
 
-# ─────────────────────────────────────
 # DETECT BUTTON
-# ─────────────────────────────────────
 st.divider()
 
-if st.button("🔍 Detect Cars and People", use_container_width=True):
+if st.button(" Detect Cars and People", use_container_width=True):
     if uploaded_file is None:
-        st.warning("⚠️ Please upload an image first!")
+        st.warning(" Please upload an image first!")
     else:
-        with st.spinner("🔄 Detecting... Please wait"):
+        with st.spinner(" Detecting... Please wait"):
             # Reset file pointer before reading again
             uploaded_file.seek(0)
 
@@ -461,7 +441,7 @@ if st.button("🔍 Detect Cars and People", use_container_width=True):
             result_image_rgb = cv2.cvtColor(result_image, cv2.COLOR_BGR2RGB)
 
         # Show what was detected (debug info)
-        with st.expander("🔬 Debug: All Detections", expanded=False):
+        with st.expander(" Debug: All Detections", expanded=False):
             if all_detected_classes:
                 st.write(", ".join(all_detected_classes))
             else:
@@ -475,32 +455,32 @@ if st.button("🔍 Detect Cars and People", use_container_width=True):
                 use_column_width=True
             )
 
-        # ─────────────────────────────────────
+        # 
         # RESULTS SUMMARY
-        # ─────────────────────────────────────
+        # 
         st.divider()
-        st.subheader("📊 Detection Summary")
+        st.subheader(" Detection Summary")
 
         # Metric cards
         m1, m2, m3, m4 = st.columns(4)
 
         with m1:
-            st.metric("🚗 Total Cars", car_count)
+            st.metric(" Total Cars", car_count)
         with m2:
-            st.metric("👥 People at Signal", people_count)
+            st.metric(" People at Signal", people_count)
         with m3:
             blue_cars = colours.count("blue")
-            st.metric("🔵 Blue Cars Detected", blue_cars)
+            st.metric(" Blue Cars Detected", blue_cars)
         with m4:
             other_cars = car_count - blue_cars
-            st.metric("🚘 Other Cars", other_cars)
+            st.metric(" Other Cars", other_cars)
 
-        # ─────────────────────────────────────
+        # 
         # COLOUR BREAKDOWN
-        # ─────────────────────────────────────
+        # 
         if colours:
             st.divider()
-            st.subheader("🎨 Car Colour Breakdown")
+            st.subheader(" Car Colour Breakdown")
 
             breakdown_cols = st.columns(len(set(colours)))
             for i, colour in enumerate(set(colours)):
@@ -511,27 +491,27 @@ if st.button("🔍 Detect Cars and People", use_container_width=True):
                         count
                     )
 
-        # ─────────────────────────────────────
+        # 
         # LEGEND
-        # ─────────────────────────────────────
+        # 
         st.divider()
-        st.subheader("🗺️ Detection Legend")
+        st.subheader(" Detection Legend")
         l1, l2, l3 = st.columns(3)
         with l1:
-            st.error("🔴 Red Rectangle = Blue Car")
+            st.error(" Red Rectangle = Blue Car")
         with l2:
-            st.info("🔵 Blue Rectangle = Other Colour Car")
+            st.info(" Blue Rectangle = Other Colour Car")
         with l3:
             st.success("🟢 Green Rectangle = Person")
 
-        # ─────────────────────────────────────
+        # 
         # ALERTS
-        # ─────────────────────────────────────
+        # 
         st.divider()
         if people_count > 0:
-            st.warning(f"⚠️ {people_count} people detected at the traffic signal!")
+            st.warning(f" {people_count} people detected at the traffic signal!")
         else:
-            st.info("✅ No people detected at the signal")
+            st.info(" No people detected at the signal")
 
         if blue_cars > 0:
-            st.error(f"🔵 {blue_cars} blue car(s) detected — marked with RED rectangle")
+            st.error(f" {blue_cars} blue car(s) detected — marked with RED rectangle")

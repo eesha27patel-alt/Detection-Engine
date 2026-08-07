@@ -1,7 +1,5 @@
-# ═══════════════════════════════════════════════════════════════
 # Task 6 - Drowsiness Detection Model
 # Uses OpenCV YuNet (face+eye landmarks) + DeepFace (age)
-# ═══════════════════════════════════════════════════════════════
 
 import streamlit as st
 import cv2
@@ -12,18 +10,14 @@ import os
 import urllib.request
 from deepface import DeepFace
 
-# ─────────────────────────────────────
 # PAGE CONFIGURATION
-# ─────────────────────────────────────
 st.set_page_config(
     page_title="Drowsiness Detection",
-    page_icon="😴",
+    page_icon="",
     layout="wide"
 )
 
-# ─────────────────────────────────────
 # SETUP
-# ─────────────────────────────────────
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 YUNET_MODEL = os.path.join(BASE_DIR, "face_detection_yunet_2023mar.onnx")
 
@@ -34,9 +28,7 @@ if not os.path.exists(YUNET_MODEL):
             YUNET_MODEL
         )
 
-# ─────────────────────────────────────
 # GET AGE using DeepFace
-# ─────────────────────────────────────
 def get_age(face_crop):
     try:
         if face_crop.size == 0 or face_crop.shape[0] < 20 or face_crop.shape[1] < 20:
@@ -51,52 +43,12 @@ def get_age(face_crop):
     except Exception:
         return "unknown"
 
-# ─────────────────────────────────────
-# CHECK IF EYES ARE OPEN
-# Uses edge variance in eye region — open eyes have more edges
-# ─────────────────────────────────────
-def are_eyes_open(image, right_eye, left_eye):
-    """Check if eyes are open by analyzing edge activity in eye regions.
-    Open eyes have more edges/contrast, closed eyes are smooth/dark."""
-    h, w = image.shape[:2]
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+# Haar cascade for eye detection (reliable open/closed check)
+eye_cascade = cv2.CascadeClassifier(
+    cv2.data.haarcascades + 'haarcascade_eye.xml'
+)
 
-    eye_size = max(15, int(min(w, h) * 0.08))
-    total_variance = 0
-    count = 0
-
-    for (ex, ey) in [right_eye, left_eye]:
-        ex, ey = int(ex), int(ey)
-        # Crop eye region
-        x1 = max(0, ex - eye_size)
-        y1 = max(0, ey - eye_size // 2)
-        x2 = min(w, ex + eye_size)
-        y2 = min(h, ey + eye_size // 2)
-
-        if x2 <= x1 or y2 <= y1:
-            continue
-
-        eye_region = gray[y1:y2, x1:x2]
-        if eye_region.size == 0:
-            continue
-
-        # Laplacian variance — measures edge activity
-        laplacian = cv2.Laplacian(eye_region, cv2.CV_64F)
-        variance = laplacian.var()
-        total_variance += variance
-        count += 1
-
-    if count == 0:
-        return True  # Default to awake if can't check
-
-    avg_variance = total_variance / count
-    # Higher variance = more edges = eyes open
-    # Lower threshold for video frames (compression reduces variance)
-    return avg_variance > 30
-
-# ─────────────────────────────────────
 # MAIN DETECTION FUNCTION
-# ─────────────────────────────────────
 def detect_drowsiness(image):
     h, w = image.shape[:2]
 
@@ -131,20 +83,28 @@ def detect_drowsiness(image):
 
             total_people += 1
             face_color = image[y1:y2, x1:x2]
+            face_gray = cv2.cvtColor(face_color, cv2.COLOR_BGR2GRAY)
 
-            # YuNet eye landmarks (absolute coordinates)
+            # Only search upper 50% of face for eyes (avoid detecting mouth/nose as eyes)
+            face_h = face_gray.shape[0]
+            upper_face = face_gray[0:int(face_h * 0.5), :]
+
+            # Detect eyes using Haar cascade (strict: minNeighbors=5, require 2 eyes)
+            eyes = eye_cascade.detectMultiScale(
+                upper_face,
+                scaleFactor=1.1,
+                minNeighbors=5,
+                minSize=(20, 20)
+            )
+
+            # Draw eye landmark points from YuNet
             right_eye = (face[4], face[5])
             left_eye = (face[6], face[7])
-
-            # Check if eyes are open using edge analysis
-            eyes_open = are_eyes_open(image, right_eye, left_eye)
-
-            # Draw eye landmark points
             for (ex, ey) in [right_eye, left_eye]:
                 cv2.circle(image, (int(ex), int(ey)), 3, (255, 255, 0), -1)
 
-            # ── SLEEPING ──
-            if not eyes_open:
+            #  SLEEPING (no eyes detected = eyes closed) 
+            if len(eyes) == 0:
                 sleeping_people += 1
                 age = get_age(face_color.copy())
                 sleeping_ages.append(age)
@@ -157,11 +117,11 @@ def detect_drowsiness(image):
                     0.6, (0, 0, 255), 2
                 )
 
-            # ── AWAKE ──
+            #  AWAKE (eyes detected = eyes open) 
             else:
                 cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), 3)
                 cv2.putText(
-                    image, "AWAKE",
+                    image, f"AWAKE ({len(eyes)} eyes)",
                     (x1, y1 - 10),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.6, (0, 255, 0), 2
@@ -178,31 +138,27 @@ def detect_drowsiness(image):
 
     return image, total_people, sleeping_people, sleeping_ages
 
-# ═══════════════════════════════════════════════════════════════
 # STREAMLIT UI
-# ═══════════════════════════════════════════════════════════════
 
-st.title("😴 Drowsiness Detection System")
+st.title(" Drowsiness Detection System")
 st.markdown("#### Detects sleeping and awake people in images and videos")
 st.divider()
 
 mode = st.radio(
     "Select Detection Mode:",
-    ["📷 Image Detection", "🎥 Video Detection"],
+    [" Image Detection", " Video Detection"],
     horizontal=True
 )
 
 st.divider()
 
-# ═══════════════════════════════════════════════════════════════
 # IMAGE MODE
-# ═══════════════════════════════════════════════════════════════
-if mode == "📷 Image Detection":
+if mode == " Image Detection":
 
     col1, col2 = st.columns(2)
 
     with col1:
-        st.subheader("📂 Upload Image")
+        st.subheader(" Upload Image")
         uploaded_file = st.file_uploader(
             "Choose an image",
             type=["jpg", "jpeg", "png"]
@@ -211,22 +167,22 @@ if mode == "📷 Image Detection":
         if uploaded_file is not None:
             image = Image.open(uploaded_file)
             st.image(image, caption="Original Image", use_container_width=True)
-            st.success("✅ Image uploaded successfully!")
+            st.success(" Image uploaded successfully!")
         else:
-            st.info("👆 Upload an image to begin")
+            st.info(" Upload an image to begin")
 
     with col2:
-        st.subheader("🔍 Detection Output")
+        st.subheader(" Detection Output")
         if uploaded_file is None:
             st.info("Detection result will appear here")
 
     st.divider()
 
-    if st.button("🔍 Detect Drowsiness", use_container_width=True):
+    if st.button(" Detect Drowsiness", use_container_width=True):
         if uploaded_file is None:
-            st.warning("⚠️ Please upload an image first!")
+            st.warning(" Please upload an image first!")
         else:
-            with st.spinner("🔄 Detecting drowsiness..."):
+            with st.spinner(" Detecting drowsiness..."):
                 file_bytes = np.asarray(
                     bytearray(uploaded_file.getvalue()),
                     dtype=np.uint8
@@ -242,43 +198,41 @@ if mode == "📷 Image Detection":
                     use_container_width=True
                 )
 
-            # ── SUMMARY ──
+            #  SUMMARY 
             st.divider()
-            st.subheader("📊 Detection Summary")
+            st.subheader(" Detection Summary")
 
             m1, m2, m3 = st.columns(3)
             with m1:
-                st.metric("👥 Total People", total)
+                st.metric(" Total People", total)
             with m2:
-                st.metric("😴 Sleeping", sleeping)
+                st.metric(" Sleeping", sleeping)
             with m3:
-                st.metric("😊 Awake", total - sleeping)
+                st.metric(" Awake", total - sleeping)
 
-            # ── POP-UP ALERT ──
+            #  POP-UP ALERT 
             if sleeping > 0:
                 age_str = ", ".join([str(a) for a in ages])
                 st.error(
-                    f"⚠️ ALERT: {sleeping} person(s) detected sleeping!\n"
+                    f" ALERT: {sleeping} person(s) detected sleeping!\n"
                     f"Ages of sleeping persons: {age_str}"
                 )
-                st.warning("🚨 Please wake up the sleeping person(s) immediately!")
+                st.warning(" Please wake up the sleeping person(s) immediately!")
             else:
-                st.success("✅ No sleeping persons detected — everyone is awake!")
+                st.success(" No sleeping persons detected — everyone is awake!")
 
-            # ── LEGEND ──
+            #  LEGEND 
             st.divider()
-            st.subheader("🗺️ Legend")
+            st.subheader(" Legend")
             l1, l2 = st.columns(2)
             with l1:
-                st.error("🔴 Red Rectangle = Sleeping Person")
+                st.error(" Red Rectangle = Sleeping Person")
             with l2:
                 st.success("🟢 Green Rectangle = Awake Person")
 
-# ═══════════════════════════════════════════════════════════════
 # VIDEO MODE
-# ═══════════════════════════════════════════════════════════════
 else:
-    st.subheader("📂 Upload Video")
+    st.subheader(" Upload Video")
     uploaded_video = st.file_uploader(
         "Choose a video file",
         type=["mp4", "avi", "mov"]
@@ -286,15 +240,15 @@ else:
 
     if uploaded_video is not None:
         st.video(uploaded_video)
-        st.success("✅ Video uploaded successfully!")
+        st.success(" Video uploaded successfully!")
 
     st.divider()
 
-    if st.button("🔍 Detect Drowsiness in Video", use_container_width=True):
+    if st.button(" Detect Drowsiness in Video", use_container_width=True):
         if uploaded_video is None:
-            st.warning("⚠️ Please upload a video first!")
+            st.warning(" Please upload a video first!")
         else:
-            with st.spinner("🔄 Processing video... please wait"):
+            with st.spinner(" Processing video... please wait"):
                 tfile = tempfile.NamedTemporaryFile(
                     delete=False, suffix=".mp4"
                 )
@@ -329,23 +283,23 @@ else:
                 os.unlink(tfile.name)
 
             st.divider()
-            st.subheader("📊 Video Detection Summary")
+            st.subheader(" Video Detection Summary")
 
             m1, m2, m3 = st.columns(3)
             with m1:
-                st.metric("👥 Max People Detected", max_total)
+                st.metric(" Max People Detected", max_total)
             with m2:
-                st.metric("😴 Max Sleeping", max_sleeping)
+                st.metric(" Max Sleeping", max_sleeping)
             with m3:
-                st.metric("🎬 Frames Processed", frame_count // 5)
+                st.metric(" Frames Processed", frame_count // 5)
 
             if max_sleeping > 0:
                 unique_ages = list(set([str(a) for a in all_sleeping_ages]))
                 age_str = ", ".join(unique_ages)
                 st.error(
-                    f"⚠️ ALERT: Up to {max_sleeping} person(s) detected sleeping!\n"
+                    f" ALERT: Up to {max_sleeping} person(s) detected sleeping!\n"
                     f"Detected ages: {age_str}"
                 )
-                st.warning("🚨 Drowsiness detected — immediate attention required!")
+                st.warning(" Drowsiness detected — immediate attention required!")
             else:
-                st.success("✅ No drowsiness detected in video!")
+                st.success(" No drowsiness detected in video!")

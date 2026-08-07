@@ -1,7 +1,5 @@
-# ═══════════════════════════════════════════════════════════════
 # Task 5 - ASL Sign Language Detection
 # Training Script (MediaPipe Hand Landmarks + Random Forest)
-# ═══════════════════════════════════════════════════════════════
 
 import os
 import numpy as np

@@ -1,9 +1,7 @@
-# ═══════════════════════════════════════════════════════════════
 # Task 4 - Nationality Detection Model
 # Author - Your Name
 # Date - Today's Date
 # Description - Detects nationality, emotion, age and dress colour
-# ═══════════════════════════════════════════════════════════════
 
 import streamlit as st
 from deepface import DeepFace
@@ -12,19 +10,15 @@ import cv2
 import numpy as np
 import os
 
-# ─────────────────────────────────────
 # PAGE CONFIGURATION
-# ─────────────────────────────────────
 st.set_page_config(
     page_title="Nationality Detection",
-    page_icon="🌍",
+    page_icon="",
     layout="wide"
 )
 
-# ─────────────────────────────────────
 # DRESS COLOUR DETECTION FUNCTION
 # Detects dominant colour below face region
-# ─────────────────────────────────────
 def get_dress_colour(image, face_region):
     h, w = image.shape[:2]
 
@@ -92,10 +86,8 @@ def get_dress_colour(image, face_region):
 
     return detected_colour
 
-# ─────────────────────────────────────
 # NATIONALITY MAPPING FUNCTION
 # Maps DeepFace race output to our categories
-# ─────────────────────────────────────
 def map_nationality(race):
     race = race.lower()
     if race == "indian":
@@ -107,9 +99,7 @@ def map_nationality(race):
     else:
         return "Other"
 
-# ─────────────────────────────────────
 # MAIN ANALYSIS FUNCTION
-# ─────────────────────────────────────
 def analyse_image(image_path):
     # Read image
     image = cv2.imread(image_path)
@@ -136,7 +126,7 @@ def analyse_image(image_path):
     age = result.get('age', 'unknown')
     face_region = result.get('region', {})
 
-    # ── Post-processing: fix common emotion misclassifications ──
+    #  Post-processing: fix common emotion misclassifications 
     # DeepFace's FER2013 model has known confusion between similar emotions
     if emotion_scores:
         # Debug: print scores to terminal
@@ -184,11 +174,13 @@ def analyse_image(image_path):
 
     return nationality, dominant_emotion, age, dress_colour, face_region, emotion_scores
 
-# ─────────────────────────────────────
 # DRAW FACE RECTANGLE FUNCTION
-# ─────────────────────────────────────
-def draw_face_box(image_path, face_region, label):
-    image = cv2.imread(image_path)
+def draw_face_box(file_bytes, face_region, label):
+    """Draw face rectangle on image from raw file bytes."""
+    img_array = np.asarray(bytearray(file_bytes), dtype=np.uint8)
+    image = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+    if image is None:
+        return None
     x = face_region.get('x', 0)
     y = face_region.get('y', 0)
     w = face_region.get('w', 0)
@@ -204,11 +196,9 @@ def draw_face_box(image_path, face_region, label):
 
     return cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-# ═══════════════════════════════════════════════════════════════
 # STREAMLIT UI
-# ═══════════════════════════════════════════════════════════════
 
-st.title("🌍 Nationality Detection System")
+st.title(" Nationality Detection System")
 st.markdown("#### Detects nationality, emotion, age and dress colour from face images")
 st.divider()
 
@@ -218,10 +208,8 @@ if "results" not in st.session_state:
 if "result_image" not in st.session_state:
     st.session_state.result_image = None
 
-# ─────────────────────────────────────
 # UPLOAD SECTION
-# ─────────────────────────────────────
-st.subheader("📂 Upload Image")
+st.subheader(" Upload Image")
 uploaded_file = st.file_uploader(
     "Upload a face image",
     type=["jpg", "jpeg", "png"]
@@ -230,23 +218,21 @@ uploaded_file = st.file_uploader(
 if uploaded_file is not None:
     image = Image.open(uploaded_file)
     st.image(image, caption="Uploaded Image", width=400)
-    st.success("✅ Image uploaded successfully!")
+    st.success(" Image uploaded successfully!")
 else:
-    st.info("👆 Upload a face image to begin")
+    st.info(" Upload a face image to begin")
     # Clear old results when no file is uploaded
     st.session_state.results = None
     st.session_state.result_image = None
 
-# ─────────────────────────────────────
 # DETECT BUTTON
-# ─────────────────────────────────────
 st.divider()
 
-if st.button("🔍 Analyse Nationality", use_container_width=True):
+if st.button(" Analyse Nationality", use_container_width=True):
     if uploaded_file is None:
-        st.warning("⚠️ Please upload an image first!")
+        st.warning(" Please upload an image first!")
     else:
-        with st.spinner("🔄 Analysing face... please wait"):
+        with st.spinner(" Analysing face... please wait"):
             # Save image temporarily using getvalue() which always works
             temp_path = os.path.join(os.path.dirname(__file__), "temp_face.jpg")
             with open(temp_path, "wb") as f:
@@ -255,9 +241,9 @@ if st.button("🔍 Analyse Nationality", use_container_width=True):
             # Run analysis
             nationality, emotion, age, dress_colour, face_region, emotion_scores = analyse_image(temp_path)
 
-            # Draw face box
+            # Draw face box using original file bytes (avoids cv2.imread path issues)
             label = f"{nationality}"
-            result_image = draw_face_box(temp_path, face_region, label)
+            result_image = draw_face_box(uploaded_file.getvalue(), face_region, label)
 
             # Clean up temp file
             os.remove(temp_path)
@@ -272,9 +258,7 @@ if st.button("🔍 Analyse Nationality", use_container_width=True):
             }
             st.session_state.result_image = result_image
 
-# ─────────────────────────────────────
 # DISPLAY RESULTS (from session state)
-# ─────────────────────────────────────
 if st.session_state.results is not None:
     res = st.session_state.results
     nationality = res["nationality"]
@@ -287,74 +271,74 @@ if st.session_state.results is not None:
     if st.session_state.result_image is not None:
         st.image(st.session_state.result_image, caption="Detection Result", width=400)
 
-    # ─────────────────────────────────────
+    # 
     # RESULTS SECTION
-    # ─────────────────────────────────────
+    # 
     st.divider()
-    st.subheader("📊 Analysis Results")
+    st.subheader(" Analysis Results")
 
-    # ── INDIAN ──
+    #  INDIAN 
     if nationality == "Indian":
-        st.info("🇮🇳 Nationality detected: **Indian**")
+        st.info(" Nationality detected: **Indian**")
         st.markdown("Showing: Nationality + Age + Dress Colour + Emotion")
         st.divider()
         r1, r2, r3, r4 = st.columns(4)
         with r1:
-            st.metric("🌍 Nationality", "Indian")
+            st.metric(" Nationality", "Indian")
         with r2:
-            st.metric("🎭 Emotion", emotion.capitalize())
+            st.metric(" Emotion", emotion.capitalize())
         with r3:
-            st.metric("🎂 Age", f"{age} years")
+            st.metric(" Age", f"{age} years")
         with r4:
-            st.metric("👗 Dress Colour", dress_colour.capitalize())
+            st.metric(" Dress Colour", dress_colour.capitalize())
 
-    # ── AMERICAN ──
+    #  AMERICAN 
     elif nationality == "American":
-        st.info("🇺🇸 Nationality detected: **American**")
+        st.info(" Nationality detected: **American**")
         st.markdown("Showing: Nationality + Age + Emotion")
         st.divider()
         r1, r2, r3 = st.columns(3)
         with r1:
-            st.metric("🌍 Nationality", "American")
+            st.metric(" Nationality", "American")
         with r2:
-            st.metric("🎭 Emotion", emotion.capitalize())
+            st.metric(" Emotion", emotion.capitalize())
         with r3:
-            st.metric("🎂 Age", f"{age} years")
+            st.metric(" Age", f"{age} years")
 
-    # ── AFRICAN ──
+    #  AFRICAN 
     elif nationality == "African":
-        st.info("🌍 Nationality detected: **African**")
+        st.info(" Nationality detected: **African**")
         st.markdown("Showing: Nationality + Emotion + Dress Colour")
         st.divider()
         r1, r2, r3 = st.columns(3)
         with r1:
-            st.metric("🌍 Nationality", "African")
+            st.metric(" Nationality", "African")
         with r2:
-            st.metric("🎭 Emotion", emotion.capitalize())
+            st.metric(" Emotion", emotion.capitalize())
         with r3:
-            st.metric("👗 Dress Colour", dress_colour.capitalize())
+            st.metric(" Dress Colour", dress_colour.capitalize())
 
-    # ── OTHER ──
+    #  OTHER 
     else:
-        st.info(f"🌐 Nationality detected: **Other**")
+        st.info(f" Nationality detected: **Other**")
         st.markdown("Showing: Nationality + Emotion")
         st.divider()
         r1, r2 = st.columns(2)
         with r1:
-            st.metric("🌍 Nationality", nationality)
+            st.metric(" Nationality", nationality)
         with r2:
-            st.metric("🎭 Emotion", emotion.capitalize())
+            st.metric(" Emotion", emotion.capitalize())
 
-    # ─────────────────────────────────────
+    # 
     # OUTPUT SUMMARY BOX
-    # ─────────────────────────────────────
+    # 
     st.divider()
-    st.subheader("📋 Complete Output Summary")
+    st.subheader(" Complete Output Summary")
     st.markdown(f"""
     | Attribute | Result |
     |---|---|
-    | 🌍 Detected Nationality | **{nationality}** |
-    | 🎭 Detected Emotion | **{emotion.capitalize()}** |
-    | 🎂 Estimated Age | **{age} years** |
-    | 👗 Dress Colour | **{dress_colour.capitalize()}** |
+    |  Detected Nationality | **{nationality}** |
+    |  Detected Emotion | **{emotion.capitalize()}** |
+    |  Estimated Age | **{age} years** |
+    |  Dress Colour | **{dress_colour.capitalize()}** |
     """)
