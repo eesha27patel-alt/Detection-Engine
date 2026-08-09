@@ -1,5 +1,5 @@
 streamlit
-numpy==1.26.4
 opencv-python-headless==4.9.0.80
 Pillow==10.2.0
+numpy==1.26.4
 ultralytics==8.1.0
